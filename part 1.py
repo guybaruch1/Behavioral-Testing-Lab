@@ -121,6 +121,19 @@ plt.legend()
 plt.tight_layout()
 plt.show()
 
+file_paths = [
+    './C1B_241124_new.mat',
+    './C1W_241124_new.mat',
+    './C1R_241124_new.mat',
+    './C1G_241124_new.mat',
+    './C2B_241124_new.mat',
+    './C2W_241124_new.mat',
+    './C2G_241124_new.mat',
+    './C2R_241124_new.mat',
+]
+
+mice_labels = ['C1B', 'C1W', 'C1R', 'C1G', 'C2B', 'C2W', 'C2G', 'C2R']
+
 
 def calculate_thigmotaxis(times_crossing, times_periphery, bin_size, total_duration):
     """
