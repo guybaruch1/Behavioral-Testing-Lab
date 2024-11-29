@@ -1,7 +1,5 @@
-import os
 import numpy as np
 from scipy.io import loadmat
-import pandas as pd
 import matplotlib.pyplot as plt
 from scipy.stats import sem
 
@@ -18,7 +16,6 @@ file_paths = [
 
 # Placeholder for Grooming and Thigmotaxis data
 grooming_data = []
-thigmotaxis_data = []
 bin_size = 150
 
 # Load all MAT files
@@ -26,16 +23,13 @@ for file_path in file_paths:
     data = loadmat(file_path)
     # Extract Grooming and Thigmotaxis (assuming keys 'Grooming' and 'Thigmotaxis')
     grooming_data.append(data.get('grooming_start_stop'))
-    # thigmotaxis_data.append(data.get('periphery_times'))
 
 for file_path in file_paths:
     data = loadmat(file_path)
     print(f"Keys in file {file_path}: {list(data.keys())}")
 
-
 # Ensure data is valid
 grooming_data = [g if g is not None else np.zeros((600,)) for g in grooming_data]
-thigmotaxis_data = [t if t is not None else np.zeros((600,)) for t in thigmotaxis_data]
 
 # Convert to numpy arrays
 # Convert grooming intervals to relative time in each second
@@ -74,6 +68,58 @@ for entry in grooming_data:
 
 # המרה למערך numpy
 grooming_data = np.array(grooming_data_fixed)
+
+# Define bin size and compute means per bin
+bin_size = 150  # כל אינטרוול הוא 150 שניות (2.5 דקות)
+num_bins = grooming_data.shape[1] // bin_size
+
+# סכום ערכים בכל אינטרוול לכל עכבר
+grooming_sums = grooming_data.reshape(grooming_data.shape[0], num_bins, bin_size).sum(axis=2)
+
+# חישוב ממוצע ערכים בכל אינטרוול עבור כל עכבר
+grooming_binned_means = grooming_sums / len(file_paths)
+
+# ממוצע סופי על פני כל העכברים עבור כל אינטרוול
+avg_grooming = np.sum(grooming_binned_means, axis=0)
+
+# שגיאה תקנית (SEM) על פני כל העכברים עבור כל אינטרוול
+sem_grooming = sem(grooming_binned_means, axis=0)
+
+# הדפסת תוצאות לבדיקה
+# print("Grooming Binned Means (Per Mouse):", grooming_binned_means)
+# print("Average Grooming (Across Mice):", avg_grooming)
+# print("SEM Grooming (Across Mice):", sem_grooming)
+
+# גרף עמודות: Grooming ממוצע
+plt.figure(figsize=(8, 5))
+time_labels = [f"Bin {i + 1}" for i in range(num_bins)]
+
+# גרף עמודות עם שגיאה תקנית
+plt.bar(time_labels, avg_grooming, yerr=sem_grooming, capsize=5, color='skyblue', label='Mean ± SEM')
+
+plt.title("Average Grooming Across All Mice (4 Time Bins)")
+plt.xlabel("Time Bins (2.5 min each)")
+plt.ylabel("Grooming Time (sec)")
+plt.grid(axis='y')  # קווי עזר על ציר ה-Y בלבד
+plt.legend()
+plt.tight_layout()
+plt.show()
+
+# גרף 2: Grooming של כל עכבר באינטרוולים
+mice_labels = ['C1B', 'C1W', 'C1R', 'C1G', 'C2B', 'C2W', 'C2G']
+
+# Plotting each mouse's grooming data with custom labels
+plt.figure(figsize=(10, 6))
+for i in range(len(grooming_binned_means)):
+    plt.plot(time_labels, grooming_binned_means[i], label=mice_labels[i])
+
+plt.title("Individual Grooming Over Time Bins")
+plt.xlabel("Time Bins (2.5 min each)")
+plt.ylabel("Grooming Time (sec)")
+plt.grid(True)
+plt.legend()
+plt.tight_layout()
+plt.show()
 
 
 def calculate_thigmotaxis(times_crossing, times_periphery, bin_size, total_duration):
@@ -138,72 +184,21 @@ all_thigmotaxis = np.array(all_thigmotaxis)
 # הדפסת תוצאות
 print("Thigmotaxis Ratios (Per Mouse):", all_thigmotaxis)
 
-
-
-# Define bin size and compute means per bin
-bin_size = 150  # כל אינטרוול הוא 150 שניות (2.5 דקות)
-num_bins = grooming_data.shape[1] // bin_size
-
-# סכום ערכים בכל אינטרוול לכל עכבר
-grooming_sums = grooming_data.reshape(grooming_data.shape[0], num_bins, bin_size).sum(axis=2)
-
-# חישוב ממוצע ערכים בכל אינטרוול עבור כל עכבר
-grooming_binned_means = grooming_sums / len(file_path)
-
-# ממוצע סופי על פני כל העכברים עבור כל אינטרוול
-avg_grooming = np.sum(grooming_binned_means, axis=0)
-
-# שגיאה תקנית (SEM) על פני כל העכברים עבור כל אינטרוול
-sem_grooming = sem(grooming_binned_means, axis=0)
-
-# הדפסת תוצאות לבדיקה
-print("Grooming Binned Means (Per Mouse):", grooming_binned_means)
-print("Average Grooming (Across Mice):", avg_grooming)
-print("SEM Grooming (Across Mice):", sem_grooming)
-
-# גרף עמודות: Grooming ממוצע
-plt.figure(figsize=(8, 5))
-time_labels = [f"Bin {i+1}" for i in range(num_bins)]
-
-# גרף עמודות עם שגיאה תקנית
-plt.bar(time_labels, avg_grooming, yerr=sem_grooming, capsize=5, color='skyblue', label='Mean ± SEM')
-
-plt.title("Average Grooming Across All Mice (4 Time Bins)")
-plt.xlabel("Time Bins (2.5 min each)")
-plt.ylabel("Grooming Time (s)")
-plt.grid(axis='y')  # קווי עזר על ציר ה-Y בלבד
-plt.legend()
-plt.tight_layout()
-plt.show()
-
-
-# גרף 2: Grooming של כל עכבר באינטרוולים
-plt.figure(figsize=(10, 6))
-for i in range(grooming_binned_means.shape[0]):
-    plt.plot(time_labels, grooming_binned_means[i], label=f'Mouse {i+1}')
-
-plt.title("Individual Grooming Over Time Bins")
-plt.xlabel("Time Bins (2.5 min each)")
-plt.ylabel("Grooming Time (s)")
-plt.grid(True)
-plt.legend()
-plt.tight_layout()
-plt.show()
-
-
-
 # חישוב ממוצעים ושגיאות תקניות לכל בין
 thigmotaxis_binned_means = np.mean(all_thigmotaxis, axis=0)
 thigmotaxis_binned_sems = sem(all_thigmotaxis, axis=0)
+thigmotaxis_binned_means *= 100
+thigmotaxis_binned_sems *= 100
 
 # תוויות הבינים
-time_labels = [f"Bin {i+1}" for i in range(len(thigmotaxis_binned_means))]
+time_labels = [f"Bin {i + 1}" for i in range(len(thigmotaxis_binned_means))]
 
 # גרף עמודות להצגת Thigmotaxis ממוצע
 plt.figure(figsize=(8, 5))
 
 # גרף עמודות עם שגיאה תקנית
-plt.bar(time_labels, thigmotaxis_binned_means, yerr=thigmotaxis_binned_sems, capsize=5, color='lightgreen', label='Mean ± SEM')
+plt.bar(time_labels, thigmotaxis_binned_means, yerr=thigmotaxis_binned_sems, capsize=5, color='lightgreen',
+        label='Mean ± SEM')
 
 # עיצוב הגרף
 plt.title("Average Thigmotaxis Across All Mice (Time Bins)")
@@ -218,8 +213,9 @@ plt.show()
 
 # גרף 2: Thigmotaxis לכל עכבר בנפרד
 plt.figure(figsize=(10, 6))
+all_thigmotaxis *= 100  # to fix percentage
 for i, thigmotaxis_ratios in enumerate(all_thigmotaxis):
-    plt.plot(time_labels, thigmotaxis_ratios, label=f'Mouse {i+1}')
+    plt.plot(time_labels, thigmotaxis_ratios, label=mice_labels[i])
 
 # עיצוב הגרף
 plt.title("Individual Thigmotaxis Over Time Bins")
